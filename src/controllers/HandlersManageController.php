@@ -9,7 +9,7 @@ use yii\web\NotFoundHttpException;
 /**
  * ManageController implements the CRUD actions for EventEventHandler model.
  */
-class ManageController extends Controller
+class HandlersManageController extends Controller
 {
     /**
      * @inheritdoc
@@ -47,10 +47,6 @@ class ManageController extends Controller
      */
     public function findModel($id)
     {
-        if (($model = EventEventHandler::getById($id)) !== null) {
-            return $model;
-        } else {
-            throw new NotFoundHttpException('The requested page does not exist.');
-        }
+        return EventEventHandler::loadModel($id, false, true, 86400, true);
     }
 }

@@ -3,8 +3,8 @@
 namespace DevGroup\EventsSystem\models;
 
 use DevGroup\EventsSystem\helpers\EventHelper;
+use DevGroup\TagDependencyHelper\TagDependencyTrait;
 use yii\data\ActiveDataProvider;
-use yiister\mappable\ActiveRecordTrait;
 
 /**
  * This is the model class for table "{{%devgroup_event_event_handler}}".
@@ -17,16 +17,18 @@ use yiister\mappable\ActiveRecordTrait;
  * @property boolean $is_active
  * @property boolean $is_system
  * @property integer $sort_order
+ *
+ * @property Event $event
  */
 class EventEventHandler extends \yii\db\ActiveRecord
 {
-    use ActiveRecordTrait;
+    use TagDependencyTrait;
 
     public function behaviors()
     {
         return [
-            'packedJsonAttributes' => [
-                'class' => 'DevGroup\DataStructure\behaviors\PackedJsonAttributes',
+            'tagDependency' => [
+                'class' => 'DevGroup\TagDependencyHelper\CacheableActiveRecord',
             ],
         ];
     }
@@ -49,7 +51,7 @@ class EventEventHandler extends \yii\db\ActiveRecord
             [['event_id'], 'exist', 'targetClass' => Event::className(), 'targetAttribute' => 'id'],
             [['event_handler_id'], 'exist', 'targetClass' => EventHandler::className(), 'targetAttribute' => 'id'],
             [['sort_order'], 'integer'],
-            [['params'], 'string'],
+            [['packed_json_params'], 'string'],
             [['is_active'], 'boolean'],
             [['is_system'], 'boolean', 'on' => 'search'],
             [['method'], 'string', 'max' => 255],
@@ -66,13 +68,18 @@ class EventEventHandler extends \yii\db\ActiveRecord
             'event_id' => EventHelper::t('Event'),
             'event_handler_id' => EventHelper::t('Event handler'),
             'method' => EventHelper::t('Method'),
-            'params' => EventHelper::t('Params'),
+            'packed_json_params' => EventHelper::t('Params'),
             'is_active' => EventHelper::t('Active'),
             'is_system' => EventHelper::t('System'),
             'sort_order' => EventHelper::t('Sort order'),
         ];
     }
 
+    /**
+     * @param $params
+     * @param $eventIds
+     * @return ActiveDataProvider
+     */
     public function search($params, $eventIds)
     {
         $this->load($params);
@@ -108,13 +115,27 @@ class EventEventHandler extends \yii\db\ActiveRecord
         );
     }
 
+    /**
+     * @return string
+     */
     public function getEventName()
     {
         return Event::getNameById($this->event_id);
     }
 
+    /**
+     * @return string
+     */
     public function getEventHandlerName()
     {
         return EventHandler::getNameById($this->event_handler_id);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getEvent()
+    {
+        return $this->hasOne(Event::className(), ['id' => 'event_id']);
     }
 }

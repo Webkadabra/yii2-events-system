@@ -9,6 +9,7 @@ use DevGroup\EventsSystem\models\EventHandler;
 use DevGroup\TagDependencyHelper\NamingHelper;
 use Yii;
 use yii\caching\TagDependency;
+use yii\helpers\Json;
 
 /**
  * Class EventHelper
@@ -28,6 +29,7 @@ class EventHelper
             $eventEventHandlers = EventEventHandler::find()
                 ->where(['is_active' => 1])
                 ->orderBy(['sort_order' => SORT_ASC])
+                ->asArray(true)
                 ->all();
             $events = Event::find()
                 ->where(['id' => array_column($eventEventHandlers, 'event_id', 'event_id')])
@@ -47,21 +49,26 @@ class EventHelper
             $handlers = [];
             foreach ($eventEventHandlers as $eventEventHandler) {
                 if (isset(
-                        $eventHandlers[$eventEventHandler->event_handler_id],
-                        $events[$eventEventHandler->event_id],
-                        $eventGroups[$events[$eventEventHandler->event_id]['event_group_id']]
+                        $eventHandlers[$eventEventHandler['event_handler_id']],
+                        $events[$eventEventHandler['event_id']],
+                        $eventGroups[$events[$eventEventHandler['event_id']]['event_group_id']]
                     ) === false
                 ) {
                     continue;
                 }
+                try {
+                    $data = Json::decode($eventEventHandler['packed_json_params']);
+                } catch (\Exception $e) {
+                    $data = [];
+                }
                 $handlers[] = [
-                    'class' => $eventGroups[$events[$eventEventHandler->event_id]['event_group_id']]['owner_class_name'],
-                    'name' => $events[$eventEventHandler->event_id]['execution_point'],
+                    'class' => $eventGroups[$events[$eventEventHandler['event_id']]['event_group_id']]['owner_class_name'],
+                    'name' => $events[$eventEventHandler['event_id']]['execution_point'],
                     'callable' => [
-                        $eventHandlers[$eventEventHandler->event_handler_id]['class_name'],
-                        $eventEventHandler->method,
+                        $eventHandlers[$eventEventHandler['event_handler_id']]['class_name'],
+                        $eventEventHandler['method'],
                     ],
-                    'data' => $eventEventHandler->params,
+                    'data' => $data,
                 ];
             }
             Yii::$app->cache->set(
@@ -109,6 +116,6 @@ class EventHelper
      */
     public static function t($message, $params = [], $language = null)
     {
-        return Yii::t('events-system', $message, $params, $language);
+        return Yii::t('devgroup.events-system', $message, $params, $language);
     }
 }
